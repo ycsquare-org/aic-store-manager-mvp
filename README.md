@@ -4,6 +4,8 @@ Project ID: `AIC-2006-0010`
 
 A dependency-free HTML, CSS, and JavaScript MVP that helps export product managers turn one source image into three scene compositions, create a long-form PNG detail image with pricing, selling points, and OEM capabilities, and add the result to a daily publishing schedule.
 
+The interface and generated image templates support English, Simplified Chinese, Spanish, and German. The selected language is saved in the current browser, while product names, keywords, and other user-entered content are preserved exactly as entered.
+
 ## MVP Assumption
 
 This version simulates the complete prepare–compose–generate–schedule–copy/download workflow. Drafts and schedules are stored only in the current browser. The local version can place a source image into three scene compositions; generating genuinely new, unphotographed product angles requires a server-side image model. Live automated publishing to Alibaba.com requires an authorized official API or another compliant automation method.

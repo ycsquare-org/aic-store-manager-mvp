@@ -172,6 +172,13 @@ img {
   letter-spacing: 0.08em;
 }
 
+.header-tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .header-status {
   display: inline-flex;
   align-items: center;
@@ -184,6 +191,36 @@ img {
   border-radius: 999px;
   font-size: 12px;
   font-weight: 650;
+}
+
+.language-picker {
+  min-height: 38px;
+  padding: 4px 5px 4px 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #484b51;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.language-label {
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.language-picker select {
+  min-width: 112px;
+  min-height: 30px;
+  padding: 3px 28px 3px 8px;
+  color: var(--ink);
+  background-color: var(--surface-solid);
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
 }
 
 .status-dot,
@@ -1233,7 +1270,7 @@ input[role="switch"]:checked::before {
 }
 
 .preview-surface.is-stale::after {
-  content: "Content changed · Regenerate";
+  content: attr(data-stale-label);
   position: sticky;
   left: 50%;
   bottom: 18px;
@@ -1980,10 +2017,19 @@ input[role="switch"]:checked::before {
 
   .header-inner {
     min-height: 64px;
+    padding-block: 10px;
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  .header-tools {
+    width: 100%;
+    padding-bottom: 2px;
+    justify-content: space-between;
   }
 
   .header-status {
-    max-width: 150px;
+    max-width: none;
     justify-content: center;
     line-height: 1.25;
     text-align: center;
@@ -2045,7 +2091,9 @@ input[role="switch"]:checked::before {
   .stepper li {
     padding-right: 8px;
     justify-content: flex-start;
-    white-space: nowrap;
+    align-items: flex-start;
+    white-space: normal;
+    line-height: 1.25;
   }
 
   .editor-card {
@@ -2168,9 +2216,21 @@ input[role="switch"]:checked::before {
   }
 
   .header-status {
-    max-width: 122px;
+    max-width: none;
     padding-inline: 8px;
     font-size: 10px;
+  }
+
+  .language-label {
+    display: none;
+  }
+
+  .language-picker {
+    padding-left: 5px;
+  }
+
+  .language-picker select {
+    min-width: 104px;
   }
 
   .hero-actions {

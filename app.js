@@ -2,6 +2,13 @@
 
 const $ = (selector, parent = document) => parent.querySelector(selector);
 const $$ = (selector, parent = document) => [...parent.querySelectorAll(selector)];
+const t = (source, variables = {}) => {
+  if (window.AICI18n?.t) return window.AICI18n.t(source, variables);
+  return String(source).replace(/\{\{(\w+)\}\}/g, (match, name) => (
+    Object.hasOwn(variables, name) ? String(variables[name]) : match
+  ));
+};
+const currentLocale = () => window.AICI18n?.getLocale?.() || "en-US";
 
 const PROJECT = {
   id: "AIC-2006-0010",
@@ -17,6 +24,7 @@ const STORAGE_KEYS = {
 const MAX_IMAGE_COUNT = 1;
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const CATEGORY_CODES = ["Knee Support", "Back Support", "Ankle Support", "Wrist Support", "Custom Orthopedic Brace"];
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 const SCENE_LABELS = {
   auto: "Smart scene match",
@@ -26,10 +34,14 @@ const SCENE_LABELS = {
   studio: "Clean studio",
 };
 const DEMO_VIEWS = [
-  { id: "front", label: "Front view", dataUrl: "./demo/knee-brace-front.png" },
-  { id: "three-quarter", label: "45° feature view", dataUrl: "./demo/knee-brace-45.png" },
-  { id: "side", label: "Side profile", dataUrl: "./demo/knee-brace-side.png" },
+  { id: "front", labelKey: "Front view", dataUrl: "./demo/knee-brace-front.png" },
+  { id: "three-quarter", labelKey: "45° feature view", dataUrl: "./demo/knee-brace-45.png" },
+  { id: "side", labelKey: "Side profile", dataUrl: "./demo/knee-brace-side.png" },
 ];
+
+function localizedDemoViews() {
+  return DEMO_VIEWS.map((view) => ({ ...view, label: t(view.labelKey) }));
+}
 
 const form = $("#product-form");
 const imageInput = $("#product-images");
@@ -63,6 +75,7 @@ const appState = {
   images: [],
   isGenerating: false,
   customTasks: [],
+  restoredImageNames: [],
 };
 
 function tomorrowAsInputValue() {
@@ -98,7 +111,7 @@ function safelyWrite(key, value) {
     window.localStorage.setItem(key, JSON.stringify(value));
     return true;
   } catch {
-    showToast("Local storage is unavailable, but your content will remain on this page for now.", "error");
+    showToast(t("Local storage is unavailable, but your content will remain on this page for now."), "error");
     return false;
   }
 }
@@ -169,15 +182,15 @@ function setGenerating(isGenerating) {
     const spinner = document.createElement("span");
     spinner.className = "spinner";
     spinner.setAttribute("aria-hidden", "true");
-    generateButton.append(spinner, document.createTextNode("Generating scene images and detail page…"));
+    generateButton.append(spinner, document.createTextNode(t("Generating scene images and detail page…")));
   } else {
     generateButton.replaceChildren();
     const icon = document.createElement("span");
     icon.setAttribute("aria-hidden", "true");
     icon.textContent = "✦";
     const label = appState.generated
-      ? "Regenerate 3 scene images and detail page"
-      : "Generate 3 scene images and detail page";
+      ? t("Regenerate 3 scene images and detail page")
+      : t("Generate 3 scene images and detail page");
     generateButton.append(icon, document.createTextNode(label));
   }
 }
@@ -216,17 +229,18 @@ function readProductData() {
     publishTime: $("#publish-time").value,
     sampleDays: Number($("#sample-days").value),
     scene: $("#scene-preset").value,
-    sceneLabel: SCENE_LABELS[$("#scene-preset").value] || SCENE_LABELS.auto,
+    sceneLabel: t(SCENE_LABELS[$("#scene-preset").value] || SCENE_LABELS.auto),
     sellingPoints,
     sellingPointsRaw: $("#selling-points").value.trim(),
     startDate: $("#start-date").value,
     targetMarket: $("#target-market").value,
+    targetMarketLabel: selectedText($("#target-market")),
   };
 }
 
 function money(value) {
   return Number.isFinite(value)
-    ? new Intl.NumberFormat("en-US", {
+    ? new Intl.NumberFormat(currentLocale(), {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       }).format(value)
@@ -234,14 +248,14 @@ function money(value) {
 }
 
 function integer(value) {
-  return Number.isFinite(value) ? new Intl.NumberFormat("en-US").format(value) : "—";
+  return Number.isFinite(value) ? new Intl.NumberFormat(currentLocale()).format(value) : "—";
 }
 
 function formatScheduleDate(value) {
-  if (!value) return "No date set";
+  if (!value) return t("No date set");
   const parsed = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) return "No date set";
-  return new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric" }).format(parsed);
+  if (Number.isNaN(parsed.getTime())) return t("No date set");
+  return new Intl.DateTimeFormat(currentLocale(), { month: "long", day: "numeric" }).format(parsed);
 }
 
 function updateRuleSummary() {
@@ -250,8 +264,8 @@ function updateRuleSummary() {
   const time = $("#publish-time").value || "—";
   const date = formatScheduleDate($("#start-date").value);
   const summary = enabled
-    ? `Starting ${date}, publish ${dailyLimit} products daily at ${time}`
-    : "Auto-publishing is off. Generated tasks will be saved for review.";
+    ? t("Starting {{date}}, publish {{count}} products daily at {{time}}", { date, count: dailyLimit, time })
+    : t("Auto-publishing is off. Generated tasks will be saved for review.");
   $("#rule-summary").textContent = summary;
   $$(".rule-fields input").forEach((input) => {
     input.disabled = !enabled;
@@ -265,12 +279,16 @@ function updatePriceAdjustmentPreview() {
   const output = $("#price-adjust-preview");
 
   if (![percent, minPrice, maxPrice].every(Number.isFinite) || percent < -50 || percent > 100) {
-    output.textContent = "Enter a valid percentage from -50% to 100%.";
+    output.textContent = t("Enter a valid percentage from -50% to 100%.");
     return;
   }
 
   const factor = 1 + percent / 100;
-  output.textContent = `Preview: US$${money(minPrice * factor)}–${money(maxPrice * factor)} (${percent > 0 ? "+" : ""}${percent}%)`;
+  output.textContent = t("Preview: US${{min}}–{{max}} ({{percent}}%)", {
+    min: money(minPrice * factor),
+    max: money(maxPrice * factor),
+    percent: `${percent > 0 ? "+" : ""}${percent}`,
+  });
 }
 
 function updatePreview() {
@@ -278,10 +296,11 @@ function updatePreview() {
   $("#preview-scene-label").textContent = data.sceneLabel;
   $("#detail-accessible-copy").textContent = [
     data.productName || "Adjustable Hinged Knee Brace for Sports Recovery",
-    `Price: US$${money(data.minPrice)}–${money(data.maxPrice)}. MOQ: ${integer(data.moq)} pieces.`,
-    `${data.sceneLabel} product images: front, 45°, and side views.`,
-    data.sellingPoints.length ? `Key selling points: ${data.sellingPoints.join("; ")}.` : "Add key selling points.",
-    `OEM: ${data.customization || "Logo, color, size, and packaging"}; sample lead time: ${integer(data.sampleDays)} days; monthly capacity: ${integer(data.monthlyCapacity)} pieces.`,
+    t("Price: US${{min}}–{{max}}", { min: money(data.minPrice), max: money(data.maxPrice) }),
+    t("MOQ: {{value}} pieces", { value: integer(data.moq) }),
+    t("Product images: 3 views · {{scene}}", { scene: data.sceneLabel }),
+    data.sellingPoints.length ? `${t("Key Selling Points")}: ${data.sellingPoints.join("; ")}.` : t("Add key selling points."),
+    `OEM: ${data.customization || "Logo, color, size, and packaging"}; ${t("Sample lead time: {{value}} days", { value: integer(data.sampleDays) })}; ${t("Monthly capacity: {{value}} pieces", { value: integer(data.monthlyCapacity) })}.`,
   ].join(" ");
 
   updateRuleSummary();
@@ -304,7 +323,7 @@ function renderImages() {
     const number = document.createElement("span");
     number.setAttribute("aria-hidden", "true");
     number.textContent = "1";
-    empty.replaceChildren(number, document.createTextNode("The source image preserves product appearance and structure"));
+    empty.replaceChildren(number, document.createTextNode(t("The source image preserves product appearance and structure")));
     imageList.append(empty);
     return;
   }
@@ -318,16 +337,16 @@ function renderImages() {
 
     const image = document.createElement("img");
     image.src = url;
-    image.alt = `${file.name}, source product image awaiting three-view scene generation`;
+    image.alt = t("{{name}}, source product image awaiting three-view scene generation", { name: file.name });
 
     const caption = document.createElement("figcaption");
-    caption.textContent = "Source image";
+    caption.textContent = t("Source image");
 
     const remove = document.createElement("button");
     remove.type = "button";
     remove.className = "image-remove";
     remove.dataset.imageIndex = String(index);
-    remove.setAttribute("aria-label", `Remove image ${file.name}`);
+    remove.setAttribute("aria-label", t("Remove image {{name}}", { name: file.name }));
     remove.textContent = "×";
 
     figure.append(image, caption, remove);
@@ -346,7 +365,7 @@ function safeDownloadName(value, fallback = "product") {
 
 function triggerAssetDownload(asset, fallbackName) {
   if (!asset?.dataUrl && !asset?.blob) {
-    showToast("This image has not been generated yet.", "error");
+    showToast(t("This image has not been generated yet."), "error");
     return;
   }
 
@@ -362,7 +381,7 @@ function triggerAssetDownload(asset, fallbackName) {
 
 function renderAngleGallery(views, { demo = false } = {}) {
   angleGallery.replaceChildren();
-  angleResultBadge.textContent = demo ? "Demo" : "Generated 3/3";
+  angleResultBadge.textContent = demo ? t("Demo") : t("Generated 3/3");
   angleResultBadge.classList.toggle("is-generated", !demo);
 
   views.forEach((view) => {
@@ -371,7 +390,11 @@ function renderAngleGallery(views, { demo = false } = {}) {
 
     const image = document.createElement("img");
     image.src = view.dataUrl;
-    image.alt = `${readProductData().productName || "Knee brace"}, ${view.label}, ${readProductData().sceneLabel}`;
+    image.alt = t("{{product}}, {{view}}, {{scene}}", {
+      product: readProductData().productName || "Knee brace",
+      view: view.label,
+      scene: readProductData().sceneLabel,
+    });
 
     const caption = document.createElement("figcaption");
     const label = document.createElement("span");
@@ -383,8 +406,8 @@ function renderAngleGallery(views, { demo = false } = {}) {
       download.type = "button";
       download.className = "angle-download";
       download.dataset.viewId = view.id;
-      download.setAttribute("aria-label", `Download ${view.label} image`);
-      download.title = `Download ${view.label}`;
+      download.setAttribute("aria-label", t("Download {{label}} image", { label: view.label }));
+      download.title = t("Download {{label}}", { label: view.label });
       download.textContent = "↓";
       caption.append(download);
     }
@@ -395,9 +418,9 @@ function renderAngleGallery(views, { demo = false } = {}) {
 }
 
 function renderOutputPlaceholders() {
-  const labels = ["Front view", "45° feature view", "Side profile"];
+  const labels = [t("Front view"), t("45° feature view"), t("Side profile")];
   angleGallery.replaceChildren();
-  angleResultBadge.textContent = "Not generated";
+  angleResultBadge.textContent = t("Not generated");
   angleResultBadge.classList.remove("is-generated");
   labels.forEach((label) => {
     const item = document.createElement("div");
@@ -414,8 +437,8 @@ function renderOutputPlaceholders() {
 function showDetailImage(asset, { demo = false } = {}) {
   detailImageElement.src = asset.dataUrl;
   detailImageElement.alt = demo
-    ? "Demo knee brace detail image with three views, pricing, selling points, and OEM capabilities"
-    : `${readProductData().productName} detail image with three views, pricing, selling points, and OEM capabilities`;
+    ? t("Demo knee brace detail image with three views, pricing, selling points, and OEM capabilities")
+    : t("{{product}} detail image with three views, pricing, selling points, and OEM capabilities", { product: readProductData().productName });
   detailImageElement.hidden = false;
   detailImageEmpty.hidden = true;
   previewSurface.classList.remove("is-stale");
@@ -437,12 +460,13 @@ function invalidateGeneratedAssets(message, { clearPreview = false } = {}) {
   appState.assetsStale = appState.assetsStale || hadGeneratedAssets;
   copyButton.disabled = true;
   exportButton.disabled = true;
+  previewSurface.dataset.staleLabel = t("Content changed · Regenerate");
   previewSurface.classList.toggle("is-stale", appState.assetsStale && !clearPreview);
 
   if (clearPreview) {
     appState.assetsStale = false;
     previewSurface.classList.remove("is-stale");
-    showDetailPlaceholder("Awaiting detail image", "Submit to generate a downloadable PNG detail image");
+    showDetailPlaceholder(t("Awaiting detail image"), t("Submit to generate a downloadable PNG detail image"));
     renderOutputPlaceholders();
   }
 
@@ -469,34 +493,34 @@ async function processImages(files) {
   const candidates = files.slice(0, MAX_IMAGE_COUNT);
 
   if (files.length > MAX_IMAGE_COUNT) {
-    rejected.push(`Only 1 source image is needed. Additional images not added: ${files.length - MAX_IMAGE_COUNT}`);
+    rejected.push(t("Only 1 source image is needed. Additional images not added: {{count}}", { count: files.length - MAX_IMAGE_COUNT }));
   }
 
   candidates.forEach((file) => {
     if (!IMAGE_TYPES.has(file.type)) {
-      rejected.push(`${file.name}: JPG, PNG, or WebP only`);
+      rejected.push(t("{{name}}: JPG, PNG, or WebP only", { name: file.name }));
       return;
     }
     if (file.size > MAX_IMAGE_SIZE) {
-      rejected.push(`${file.name}: exceeds 10 MB`);
+      rejected.push(t("{{name}}: exceeds 10 MB", { name: file.name }));
       return;
     }
     const existing = appState.images[0];
     const duplicate = existing && existing.name === file.name && existing.size === file.size && existing.lastModified === file.lastModified;
     if (duplicate) {
-      rejected.push(`${file.name}: matches the current source image`);
+      rejected.push(t("{{name}}: matches the current source image", { name: file.name }));
     }
   });
 
   const validCandidates = candidates.filter((file) =>
     IMAGE_TYPES.has(file.type) &&
     file.size <= MAX_IMAGE_SIZE &&
-    !rejected.some((message) => message.startsWith(`${file.name}:`)),
+    !rejected.some((message) => message.includes(file.name)),
   );
   const decodeResults = await Promise.all(validCandidates.map(canDecodeImage));
   const accepted = validCandidates.filter((file, index) => {
     if (decodeResults[index]) return true;
-    rejected.push(`${file.name}: unreadable or damaged image`);
+    rejected.push(t("{{name}}: unreadable or damaged image", { name: file.name }));
     return false;
   });
 
@@ -505,14 +529,14 @@ async function processImages(files) {
     appState.images = [accepted[0]];
     renderImages();
     updatePreview();
-    invalidateGeneratedAssets("The source image has changed. Regenerate the three views and detail image.", { clearPreview: true });
+    invalidateGeneratedAssets(t("The source image has changed. Regenerate the three views and detail image."), { clearPreview: true });
     imageInput.removeAttribute("aria-invalid");
-    showToast(replaced ? "Source image replaced. Regenerate the images." : "Source image added. You can now generate three views.", "success");
+    showToast(replaced ? t("Source image replaced. Regenerate the images.") : t("Source image added. You can now generate three views."), "success");
   }
   imageError.textContent = rejected.join("; ");
 
   if (rejected.length) {
-    showToast(`${rejected.length} image issue(s) found. Check the upload area for details.`, "error");
+    showToast(t("{{count}} image issue(s) found. Check the upload area for details.", { count: rejected.length }), "error");
   }
 }
 
@@ -539,71 +563,71 @@ function validateForm() {
   const data = readProductData();
 
   if (!appState.images.length) {
-    markInvalid(imageInput, imageError, "Upload at least 1 product image.", errors);
+    markInvalid(imageInput, imageError, t("Upload at least 1 product image."), errors);
   }
 
   const productName = $("#product-name");
   if (!data.productName) {
-    markInvalid(productName, $("#product-name-error"), "Enter an English product name.", errors);
+    markInvalid(productName, $("#product-name-error"), t("Enter an English product name."), errors);
   } else if (data.productName.length < 8) {
-    markInvalid(productName, $("#product-name-error"), "Product name must be at least 8 characters.", errors);
+    markInvalid(productName, $("#product-name-error"), t("Product name must be at least 8 characters."), errors);
   } else if (data.productName.length > 120) {
-    markInvalid(productName, $("#product-name-error"), "Product name must be no more than 120 characters.", errors);
+    markInvalid(productName, $("#product-name-error"), t("Product name must be no more than 120 characters."), errors);
   }
 
   const category = $("#category");
   if (!data.category) {
-    markInvalid(category, $("#category-error"), "Select a product category.", errors);
+    markInvalid(category, $("#category-error"), t("Select a product category."), errors);
   }
 
   const keywords = $("#keywords");
   if (!data.keywords.length) {
-    markInvalid(keywords, $("#keywords-error"), "Enter at least 1 English search keyword.", errors);
+    markInvalid(keywords, $("#keywords-error"), t("Enter at least 1 English search keyword."), errors);
   } else if (data.keywords.length > 5) {
-    markInvalid(keywords, $("#keywords-error"), "Enter no more than 5 keywords.", errors);
+    markInvalid(keywords, $("#keywords-error"), t("Enter no more than 5 keywords."), errors);
   }
 
   const sellingPoints = $("#selling-points");
   if (!data.sellingPointsRaw) {
-    markInvalid(sellingPoints, $("#selling-points-error"), "Enter at least 2 verifiable selling points.", errors);
+    markInvalid(sellingPoints, $("#selling-points-error"), t("Enter at least 2 verifiable selling points."), errors);
   } else if (data.sellingPoints.length < 2) {
-    markInvalid(sellingPoints, $("#selling-points-error"), "Separate at least 2 selling points with semicolons.", errors);
+    markInvalid(sellingPoints, $("#selling-points-error"), t("Separate at least 2 selling points with semicolons."), errors);
   }
 
   const sampleDays = $("#sample-days");
   const monthlyCapacity = $("#monthly-capacity");
   const oemNumberError = $("#oem-number-error");
   if (!Number.isInteger(data.sampleDays) || data.sampleDays < 1 || data.sampleDays > 60) {
-    markInvalid(sampleDays, oemNumberError, "Sample lead time must be an integer from 1 to 60 days.", errors);
+    markInvalid(sampleDays, oemNumberError, t("Sample lead time must be an integer from 1 to 60 days."), errors);
   } else if (!Number.isInteger(data.monthlyCapacity) || data.monthlyCapacity < 1 || data.monthlyCapacity > 9999999) {
-    markInvalid(monthlyCapacity, oemNumberError, "Monthly capacity must be an integer from 1 to 9,999,999.", errors);
+    markInvalid(monthlyCapacity, oemNumberError, t("Monthly capacity must be an integer from 1 to 9,999,999."), errors);
   }
 
   const moq = $("#moq");
   const leadTime = $("#lead-time");
   const tradeNumberError = $("#trade-number-error");
   if (!Number.isInteger(data.moq) || data.moq < 1 || data.moq > 999999) {
-    markInvalid(moq, tradeNumberError, "MOQ must be an integer from 1 to 999,999.", errors);
+    markInvalid(moq, tradeNumberError, t("MOQ must be an integer from 1 to 999,999."), errors);
   } else if (!Number.isInteger(data.leadTime) || data.leadTime < 1 || data.leadTime > 365) {
-    markInvalid(leadTime, tradeNumberError, "Lead time must be an integer from 1 to 365 days.", errors);
+    markInvalid(leadTime, tradeNumberError, t("Lead time must be an integer from 1 to 365 days."), errors);
   }
 
   const minPrice = $("#min-price");
   const maxPrice = $("#max-price");
   const priceError = $("#price-error");
   if (!Number.isFinite(data.minPrice) || data.minPrice < 0.01 || data.minPrice > 999999.99) {
-    markInvalid(minPrice, priceError, "Minimum price must be between 0.01 and 999,999.99.", errors);
+    markInvalid(minPrice, priceError, t("Minimum price must be between 0.01 and 999,999.99."), errors);
   } else if (!Number.isFinite(data.maxPrice) || data.maxPrice < 0.01 || data.maxPrice > 999999.99) {
-    markInvalid(maxPrice, priceError, "Maximum price must be between 0.01 and 999,999.99.", errors);
+    markInvalid(maxPrice, priceError, t("Maximum price must be between 0.01 and 999,999.99."), errors);
   } else if (!hasAtMostTwoDecimals(data.minPrice) || !hasAtMostTwoDecimals(data.maxPrice)) {
     minPrice.setAttribute("aria-invalid", "true");
     maxPrice.setAttribute("aria-invalid", "true");
-    priceError.textContent = "Prices can have no more than 2 decimal places.";
+    priceError.textContent = t("Prices can have no more than 2 decimal places.");
     errors.push(minPrice);
   } else if (data.maxPrice < data.minPrice) {
     minPrice.setAttribute("aria-invalid", "true");
     maxPrice.setAttribute("aria-invalid", "true");
-    priceError.textContent = "Maximum price cannot be lower than minimum price.";
+    priceError.textContent = t("Maximum price cannot be lower than minimum price.");
     errors.push(maxPrice);
   }
 
@@ -613,19 +637,19 @@ function validateForm() {
     const startDate = $("#start-date");
     if (!Number.isInteger(data.dailyLimit) || data.dailyLimit < 1 || data.dailyLimit > 20) {
       dailyLimit.setAttribute("aria-invalid", "true");
-      $("#schedule-error").textContent = "Daily publishing limit must be an integer from 1 to 20.";
+      $("#schedule-error").textContent = t("Daily publishing limit must be an integer from 1 to 20.");
       errors.push(dailyLimit);
     } else if (!data.publishTime) {
       publishTime.setAttribute("aria-invalid", "true");
-      $("#schedule-error").textContent = "Choose a daily publishing time.";
+      $("#schedule-error").textContent = t("Choose a daily publishing time.");
       errors.push(publishTime);
     } else if (!data.startDate) {
       startDate.setAttribute("aria-invalid", "true");
-      $("#schedule-error").textContent = "Choose an auto-publishing start date.";
+      $("#schedule-error").textContent = t("Choose an auto-publishing start date.");
       errors.push(startDate);
     } else if (data.startDate < todayAsInputValue()) {
       startDate.setAttribute("aria-invalid", "true");
-      $("#schedule-error").textContent = "Start date cannot be earlier than today.";
+      $("#schedule-error").textContent = t("Start date cannot be earlier than today.");
       errors.push(startDate);
     }
   }
@@ -634,7 +658,7 @@ function validateForm() {
     const firstError = errors[0];
     firstError.focus({ preventScroll: true });
     firstError.scrollIntoView({ behavior: reducedMotion.matches ? "auto" : "smooth", block: "center" });
-    const message = `Complete ${new Set(errors).size} required field(s) before generating.`;
+    const message = t("Required fields to complete: {{count}}.", { count: new Set(errors).size });
     setPreviewMessage("error", message);
     showToast(message, "error");
     announce(message);
@@ -647,29 +671,33 @@ function validateForm() {
 function buildDetailCopy(data) {
   const points = data.sellingPoints.map((point, index) => `${index + 1}. ${point}`).join("\n");
   const schedule = data.autoPublish
-    ? `${formatScheduleDate(data.startDate)} at ${data.publishTime}, ${data.dailyLimit} products per day`
-    : "Auto-publishing is off; awaiting manual review";
+    ? t("{{date}} at {{time}}, {{count}} products per day", {
+        date: formatScheduleDate(data.startDate),
+        time: data.publishTime,
+        count: data.dailyLimit,
+      })
+    : t("Auto-publishing is off; awaiting manual review");
 
   return [
     data.productName,
     "",
-    `Category: ${data.category}`,
-    `Price: US$${money(data.minPrice)}–${money(data.maxPrice)}`,
-    `MOQ: ${integer(data.moq)} pieces`,
-    `Lead time: ${integer(data.leadTime)} days`,
-    `Product images: 3 views · ${data.sceneLabel}`,
+    t("Category: {{value}}", { value: data.categoryLabel || t(data.category) }),
+    t("Price: US${{min}}–{{max}}", { min: money(data.minPrice), max: money(data.maxPrice) }),
+    t("MOQ: {{value}} pieces", { value: integer(data.moq) }),
+    t("Lead time: {{value}} days", { value: integer(data.leadTime) }),
+    t("Product images: 3 views · {{scene}}", { scene: data.sceneLabel }),
     "",
-    "KEY BUYING POINTS",
+    t("KEY BUYING POINTS"),
     points,
     "",
-    "OEM / ODM CAPABILITY",
-    `Customization: ${data.customization || "Logo, color, size and packaging"}`,
-    `Sample lead time: ${integer(data.sampleDays)} days`,
-    `Monthly capacity: ${integer(data.monthlyCapacity)} pieces`,
-    `Quality certifications: ${data.certifications || "Available on request"}`,
-    `Main market: ${data.targetMarket}`,
+    t("OEM / ODM CAPABILITY"),
+    t("Customization: {{value}}", { value: data.customization || t("Logo, color, size and packaging") }),
+    t("Sample lead time: {{value}} days", { value: integer(data.sampleDays) }),
+    t("Monthly capacity: {{value}} pieces", { value: integer(data.monthlyCapacity) }),
+    t("Quality certifications: {{value}}", { value: data.certifications || t("Available on request") }),
+    t("Main market: {{value}}", { value: data.targetMarketLabel || t(data.targetMarket) }),
     "",
-    `Publishing plan: ${schedule}`,
+    t("Publishing plan: {{value}}", { value: schedule }),
   ].join("\n");
 }
 
@@ -687,8 +715,8 @@ function saveDraft({ quiet = false } = {}) {
   const saved = safelyWrite(STORAGE_KEYS.draft, draftFromForm());
   if (saved && !quiet) {
     const message = appState.images.length
-      ? "Draft saved. You will need to select the local image again after refreshing."
-      : "Draft saved in this browser.";
+      ? t("Draft saved. You will need to select the local image again after refreshing.")
+      : t("Draft saved in this browser.");
     showToast(message, "success");
     announce(message);
   }
@@ -707,7 +735,11 @@ function restoreDraft() {
   });
 
   if (Array.isArray(draft.imageNames) && draft.imageNames.length) {
-    imageError.textContent = `This draft references ${draft.imageNames.length} image(s) (${draft.imageNames.join(", ")}). For browser security, please select the file again.`;
+    appState.restoredImageNames = [...draft.imageNames];
+    imageError.textContent = t("This draft references {{count}} image(s) ({{names}}). For browser security, please select the file again.", {
+      count: draft.imageNames.length,
+      names: draft.imageNames.join(", "),
+    });
   }
   return true;
 }
@@ -718,27 +750,32 @@ function createTaskRow(task) {
   row.dataset.taskId = task.id;
 
   const productCell = document.createElement("td");
-  productCell.dataset.label = "Product";
+  productCell.dataset.label = t("Product");
   const name = document.createElement("strong");
   name.textContent = task.name;
   const category = document.createElement("small");
-  category.textContent = task.category;
+  const categoryCode = task.categoryCode || CATEGORY_CODES.find((value) => String(task.category || "").includes(value));
+  category.textContent = t(categoryCode || task.category || "");
   productCell.append(name, category);
 
   const timeCell = document.createElement("td");
-  timeCell.dataset.label = "Scheduled time";
-  timeCell.textContent = task.time;
+  timeCell.dataset.label = t("Scheduled time");
+  timeCell.textContent = task.startDate && task.publishTime
+    ? `${formatScheduleDate(task.startDate)} ${task.publishTime}`
+    : t(task.time || "Awaiting manual review");
 
   const priceCell = document.createElement("td");
-  priceCell.dataset.label = "Price";
-  priceCell.textContent = task.price;
+  priceCell.dataset.label = t("Price");
+  priceCell.textContent = Number.isFinite(task.minPrice) && Number.isFinite(task.maxPrice)
+    ? `US$${money(task.minPrice)}–${money(task.maxPrice)}`
+    : task.price;
 
   const completenessCell = document.createElement("td");
-  completenessCell.dataset.label = "Content completeness";
+  completenessCell.dataset.label = t("Content completeness");
   const progress = document.createElement("div");
   progress.className = "progress";
   progress.setAttribute("role", "progressbar");
-  progress.setAttribute("aria-label", "Content completeness");
+  progress.setAttribute("aria-label", t("Content completeness"));
   progress.setAttribute("aria-valuemin", "0");
   progress.setAttribute("aria-valuemax", "100");
   progress.setAttribute("aria-valuenow", String(task.completeness));
@@ -750,16 +787,16 @@ function createTaskRow(task) {
   completenessCell.append(progress, percentage);
 
   const statusCell = document.createElement("td");
-  statusCell.dataset.label = "Status";
+  statusCell.dataset.label = t("Status");
   const status = document.createElement("span");
   status.className = `state-badge state-${task.status}`;
   status.textContent = task.status === "published"
-    ? "Published"
+    ? t("Published")
     : task.status === "failed"
-      ? "Needs attention"
+      ? t("Needs attention")
       : task.status === "draft"
-        ? "Awaiting review"
-        : "Scheduled";
+        ? t("Awaiting review")
+        : t("Scheduled");
   statusCell.append(status);
 
   const actionCell = document.createElement("td");
@@ -767,7 +804,7 @@ function createTaskRow(task) {
   action.type = "button";
   action.className = "text-button";
   action.dataset.taskAction = task.status === "failed" ? "retry" : "view";
-  action.textContent = task.status === "failed" ? "Fix" : "View";
+  action.textContent = task.status === "failed" ? t("Fix") : t("View");
   actionCell.append(action);
 
   row.append(productCell, timeCell, priceCell, completenessCell, statusCell, actionCell);
@@ -787,13 +824,16 @@ function renderCustomTasks() {
 function addOrUpdateTask(data) {
   const id = data.productName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `task-${Date.now()}`;
   const task = {
-    category: data.categoryLabel || data.category,
+    categoryCode: data.category,
     completeness: 100,
     id,
+    maxPrice: data.maxPrice,
+    minPrice: data.minPrice,
     name: data.productName,
-    price: `US$${money(data.minPrice)}–${money(data.maxPrice)}`,
+    publishTime: data.autoPublish ? data.publishTime : "",
+    startDate: data.autoPublish ? data.startDate : "",
     status: data.autoPublish ? "scheduled" : "draft",
-    time: data.autoPublish ? `${formatScheduleDate(data.startDate)} ${data.publishTime}` : "Awaiting manual review",
+    time: data.autoPublish ? "" : "Awaiting manual review",
   };
   const existing = appState.customTasks.findIndex((item) => item.id === id);
   if (existing >= 0) appState.customTasks.splice(existing, 1, task);
@@ -835,9 +875,9 @@ async function generateDetail(data) {
   }
   setGenerating(true);
   renderOutputPlaceholders();
-  showDetailPlaceholder("Generating detail image", "Creating three scene images, then arranging pricing, selling points, and OEM capabilities");
-  setPreviewMessage("loading", "Generating image 1 of 3: Front view…");
-  announce("Generating three scene images and the detail image. Please wait.");
+  showDetailPlaceholder(t("Generating detail image"), t("Creating three scene images, then arranging pricing, selling points, and OEM capabilities"));
+  setPreviewMessage("loading", t("Generating image 1 of 3: Front view…"));
+  announce(t("Generating three scene images and the detail image. Please wait."));
 
   const delay = reducedMotion.matches ? 120 : 360;
   await new Promise((resolve) => window.setTimeout(resolve, delay));
@@ -845,9 +885,9 @@ async function generateDetail(data) {
   if ($("#simulate-failure").checked) {
     $("#simulate-failure").checked = false;
     setGenerating(false);
-    setPreviewMessage("error", "Image generation failed: the demo service is temporarily unavailable. Your content was preserved; select the main button to retry.");
-    showToast("Image generation failed. Your content was preserved; use the main button to retry.", "error");
-    announce("Image generation failed. Your content was preserved and you can retry.");
+    setPreviewMessage("error", t("Image generation failed: the demo service is temporarily unavailable. Your content was preserved; select the main button to retry."));
+    showToast(t("Image generation failed. Your content was preserved; use the main button to retry."), "error");
+    announce(t("Image generation failed. Your content was preserved and you can retry."));
     return;
   }
 
@@ -868,7 +908,7 @@ async function generateDetail(data) {
 
     appState.generatedViews = views;
     renderAngleGallery(views);
-    setPreviewMessage("loading", "All three scene images are ready. Building the detail image…");
+    setPreviewMessage("loading", t("All three scene images are ready. Building the detail image…"));
 
     const detailImage = await window.AICImageStudio.generateDetailLongImage({ data, views });
     appState.detailImage = detailImage;
@@ -894,8 +934,11 @@ async function generateDetail(data) {
     setGenerating(false);
 
     const scheduleMessage = data.autoPublish
-      ? `Three scene images and the detail image are ready. Publishing is scheduled for ${formatScheduleDate(data.startDate)} at ${data.publishTime}.`
-      : "Three scene images and the detail image are ready and saved for manual review.";
+      ? t("Three scene images and the detail image are ready. Publishing is scheduled for {{date}} at {{time}}.", {
+          date: formatScheduleDate(data.startDate),
+          time: data.publishTime,
+        })
+      : t("Three scene images and the detail image are ready and saved for manual review.");
     setPreviewMessage("success", scheduleMessage);
     showToast(scheduleMessage, "success");
     announce(scheduleMessage);
@@ -903,16 +946,16 @@ async function generateDetail(data) {
     setGenerating(false);
     copyButton.disabled = true;
     exportButton.disabled = true;
-    const detail = error instanceof Error ? error.message : "Unknown error";
-    setPreviewMessage("error", `Image generation failed: ${detail}. Your content was preserved; please retry.`);
-    showToast("Image generation failed. Your source content and completed views were preserved.", "error");
-    announce("Image generation failed. You can retry.");
+    const detail = error instanceof Error ? t(error.message) : t("Unknown error");
+    setPreviewMessage("error", t("Image generation failed: {{detail}}. Your content was preserved; please retry.", { detail }));
+    showToast(t("Image generation failed. Your source content and completed views were preserved."), "error");
+    announce(t("Image generation failed. You can retry."));
   }
 }
 
 async function copyGeneratedContent() {
   if (!appState.generated || appState.assetsStale) {
-    showToast("Generate the latest detail image before copying the description.", "error");
+    showToast(t("Generate the latest detail image before copying the description."), "error");
     return;
   }
 
@@ -930,17 +973,17 @@ async function copyGeneratedContent() {
       fallback.remove();
       if (!copied) throw new Error("Copy command failed");
     }
-    showToast("Product description copied. It is ready to paste into your publishing dashboard.", "success");
-    announce("Product description copied.");
+    showToast(t("Product description copied. It is ready to paste into your publishing dashboard."), "success");
+    announce(t("Product description copied."));
   } catch {
-    showToast("Copy failed. Select and copy the description manually from the preview.", "error");
-    announce("Product description could not be copied.");
+    showToast(t("Copy failed. Select and copy the description manually from the preview."), "error");
+    announce(t("Product description could not be copied."));
   }
 }
 
 function downloadGeneratedPackage() {
   if (!appState.generated || !appState.detailImage || appState.assetsStale) {
-    showToast("Generate the latest detail image before downloading the PNG.", "error");
+    showToast(t("Generate the latest detail image before downloading the PNG."), "error");
     return;
   }
 
@@ -949,11 +992,11 @@ function downloadGeneratedPackage() {
       appState.detailImage,
       `${PROJECT.id}-${safeDownloadName(appState.generated.productName)}-detail.png`,
     );
-    showToast("Detail-page PNG downloaded. It is ready for your Alibaba.com product page.", "success");
-    announce("Detail-page PNG downloaded.");
+    showToast(t("Detail-page PNG downloaded. It is ready for your Alibaba.com product page."), "success");
+    announce(t("Detail-page PNG downloaded."));
   } catch {
-    showToast("Export failed. Allow downloads in your browser and try again.", "error");
-    announce("Detail image download failed.");
+    showToast(t("Export failed. Allow downloads in your browser and try again."), "error");
+    announce(t("Detail image download failed."));
   }
 }
 
@@ -970,13 +1013,13 @@ function applyPriceAdjustment() {
   if (!Number.isFinite(percent) || percent < -50 || percent > 100 || percent === 0) {
     percentInput.setAttribute("aria-invalid", "true");
     feedback.classList.add("is-error");
-    feedback.textContent = "Enter a non-zero adjustment from -50% to 100%.";
+    feedback.textContent = t("Enter a non-zero adjustment from -50% to 100%.");
     percentInput.focus();
     return;
   }
   if (!Number.isFinite(minPrice) || !Number.isFinite(maxPrice) || minPrice <= 0 || maxPrice < minPrice) {
     feedback.classList.add("is-error");
-    feedback.textContent = "Enter a valid current price range first.";
+    feedback.textContent = t("Enter a valid current price range first.");
     minPriceInput.focus();
     return;
   }
@@ -987,11 +1030,19 @@ function applyPriceAdjustment() {
   maxPriceInput.value = nextMax.toFixed(2);
   percentInput.removeAttribute("aria-invalid");
   feedback.classList.add("is-success");
-  feedback.textContent = `Adjusted from US$${money(minPrice)}–${money(maxPrice)} to US$${money(nextMin)}–${money(nextMax)}.`;
-  invalidateGeneratedAssets("Price updated. Regenerate the three views and detail image.");
+  feedback.textContent = t("Adjusted from US${{oldMin}}–{{oldMax}} to US${{newMin}}–{{newMax}}.", {
+    oldMin: money(minPrice),
+    oldMax: money(maxPrice),
+    newMin: money(nextMin),
+    newMax: money(nextMax),
+  });
+  invalidateGeneratedAssets(t("Price updated. Regenerate the three views and detail image."));
   updatePreview();
-  showToast(`Price ${percent > 0 ? "increased" : "decreased"} by ${Math.abs(percent)}%. You can still edit it before generating.`, "success");
-  announce("Price updated successfully.");
+  showToast(t("Price {{direction}} by {{percent}}%. You can still edit it before generating.", {
+    direction: t(percent > 0 ? "increased" : "decreased"),
+    percent: Math.abs(percent),
+  }), "success");
+  announce(t("Price updated successfully."));
 }
 
 function restoreGenerated() {
@@ -1004,13 +1055,14 @@ function restoreGenerated() {
   copyButton.disabled = true;
   exportButton.disabled = true;
   setGenerating(false);
-  setPreviewMessage("loading", "Your previous content was restored. Images are not stored in the browser; select the source image again and regenerate.");
+  setPreviewMessage("loading", t("Your previous content was restored. Images are not stored in the browser; select the source image again and regenerate."));
 }
 
 async function initializeDemoPreview() {
-  renderAngleGallery(DEMO_VIEWS, { demo: true });
+  const demoViews = localizedDemoViews();
+  renderAngleGallery(demoViews, { demo: true });
   if (!window.AICImageStudio?.generateDetailLongImage) {
-    showDetailPlaceholder("Demo detail image unavailable", "You can still complete the product details after uploading a source image");
+    showDetailPlaceholder(t("Demo detail image unavailable"), t("You can still complete the product details after uploading a source image"));
     return;
   }
 
@@ -1018,10 +1070,10 @@ async function initializeDemoPreview() {
   const demoData = {
     ...formData,
     category: "Knee Support",
-    categoryLabel: "Knee Support",
+    categoryLabel: t("Knee Support"),
     productName: "Adjustable Hinged Knee Brace for Sports Recovery",
     scene: "rehabilitation",
-    sceneLabel: SCENE_LABELS.rehabilitation,
+    sceneLabel: t(SCENE_LABELS.rehabilitation),
     sellingPoints: [
       "Dual aluminum hinges deliver stable medial and lateral support",
       "Breathable mesh improves comfort for extended wear",
@@ -1032,13 +1084,13 @@ async function initializeDemoPreview() {
   try {
     const demoDetail = await window.AICImageStudio.generateDetailLongImage({
       data: demoData,
-      views: DEMO_VIEWS,
+      views: demoViews,
     });
     if (appState.images.length || appState.isGenerating) return;
     showDetailImage(demoDetail, { demo: true });
   } catch {
     if (!appState.images.length) {
-      showDetailPlaceholder("Demo detail image unavailable", "Upload a source image, then select Generate to try again");
+      showDetailPlaceholder(t("Demo detail image unavailable"), t("Upload a source image, then select Generate to try again"));
     }
   }
 }
@@ -1059,7 +1111,7 @@ function initialize() {
   initializeDemoPreview();
 
   if (restoredDraft) {
-    announce("Your saved product draft was restored.");
+    announce(t("Your saved product draft was restored."));
   }
 }
 
@@ -1079,7 +1131,7 @@ form.addEventListener("input", (event) => {
       if (element?.classList.contains("field-error")) element.textContent = "";
     });
     if (!appState.isGenerating) {
-      invalidateGeneratedAssets("Product content changed. Regenerate the three views and detail image.");
+      invalidateGeneratedAssets(t("Product content changed. Regenerate the three views and detail image."));
     }
     updatePreview();
   }
@@ -1098,9 +1150,9 @@ imageList.addEventListener("click", (event) => {
   appState.images.splice(index, 1);
   renderImages();
   updatePreview();
-  invalidateGeneratedAssets("Source image removed. Upload an image before generating again.", { clearPreview: true });
+  invalidateGeneratedAssets(t("Source image removed. Upload an image before generating again."), { clearPreview: true });
   void initializeDemoPreview();
-  showToast(`${removed.name} was removed from the image list.`, "info");
+  showToast(t("{{name}} was removed from the image list.", { name: removed.name }), "info");
 });
 
 ["dragenter", "dragover"].forEach((eventName) => {
@@ -1129,12 +1181,12 @@ angleGallery.addEventListener("click", (event) => {
   if (!button) return;
   const view = appState.generatedViews.find((item) => item.id === button.dataset.viewId);
   if (!view) {
-    showToast("This view needs to be regenerated.", "error");
+    showToast(t("This view needs to be regenerated."), "error");
     return;
   }
   triggerAssetDownload(view, `${safeDownloadName(readProductData().productName)}-${view.id}.png`);
-  showToast(`${view.label} downloaded.`, "success");
-  announce(`${view.label} downloaded.`);
+  showToast(t("{{label}} downloaded.", { label: view.label }), "success");
+  announce(t("{{label}} downloaded.", { label: view.label }));
 });
 $("#apply-price-adjustment").addEventListener("click", applyPriceAdjustment);
 
@@ -1153,18 +1205,50 @@ taskTableBody.addEventListener("click", (event) => {
   const action = event.target.closest("[data-task-action]");
   if (!action) return;
   const row = action.closest("tr");
-  const name = $("td strong", row)?.textContent || "This product";
+  const name = $("td strong", row)?.textContent || t("This product");
 
   if (action.dataset.taskAction === "retry") {
     $("#product-name").value = name;
     $("#min-price").focus({ preventScroll: true });
     $("#min-price").scrollIntoView({ behavior: reducedMotion.matches ? "auto" : "smooth", block: "center" });
     updatePreview();
-    showToast("Product loaded. Review the pricing, then regenerate.", "info");
-    announce("Product requiring attention loaded.");
+    showToast(t("Product loaded. Review the pricing, then regenerate."), "info");
+    announce(t("Product requiring attention loaded."));
   } else {
     $(".preview-card")?.scrollIntoView({ behavior: reducedMotion.matches ? "auto" : "smooth", block: "start" });
-    showToast(`The detail preview for ${name} is in the Create Task section.`, "info");
+    showToast(t("The detail preview for {{name}} is in the Create Task section.", { name }), "info");
+  }
+});
+
+window.addEventListener("aic:languagechange", (event) => {
+  clearValidation();
+  $("#price-adjust-feedback").textContent = "";
+  renderCustomTasks();
+  renderImages();
+  updatePreview();
+  setGenerating(appState.isGenerating);
+
+  if (!appState.images.length && appState.restoredImageNames.length) {
+    imageError.textContent = t("This draft references {{count}} image(s) ({{names}}). For browser security, please select the file again.", {
+      count: appState.restoredImageNames.length,
+      names: appState.restoredImageNames.join(", "),
+    });
+  }
+
+  if (appState.generated || appState.detailImage || appState.generatedViews.length) {
+    invalidateGeneratedAssets(t("Interface language changed. Regenerate the three views and detail image."));
+    renderOutputPlaceholders();
+  } else if (!appState.images.length) {
+    if (!previewState.hidden) {
+      setPreviewMessage("loading", t("Your previous content was restored. Images are not stored in the browser; select the source image again and regenerate."));
+    }
+    void initializeDemoPreview();
+  } else {
+    renderOutputPlaceholders();
+  }
+
+  if (event.detail?.announce !== false) {
+    announce(t("Interface language changed to {{language}}.", { language: event.detail?.label || "" }));
   }
 });
 

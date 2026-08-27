@@ -24,6 +24,7 @@
     <!-- social-preview-image -->
     <title>Alibaba.com Store Manager | AIC-2006-0010</title>
     <link rel="stylesheet" href="./styles.css" />
+    <script src="./i18n.js" defer></script>
     <script src="./image-studio.js" defer></script>
     <script src="./app.js" defer></script>
   </head>
@@ -39,9 +40,20 @@
             <small>AIC-2006-0010</small>
           </span>
         </a>
-        <div class="header-status" aria-label="System status">
-          <span class="status-dot" aria-hidden="true"></span>
-          Local MVP · No live publishing
+        <div class="header-tools">
+          <div class="header-status" aria-label="System status">
+            <span class="status-dot" aria-hidden="true"></span>
+            Local MVP · No live publishing
+          </div>
+          <label class="language-picker" for="language-selector">
+            <span class="language-label">Language</span>
+            <select id="language-selector" name="interfaceLanguage" aria-label="Interface language">
+              <option value="en">English</option>
+              <option value="zh-CN">简体中文</option>
+              <option value="es">Español</option>
+              <option value="de">Deutsch</option>
+            </select>
+          </label>
         </div>
       </div>
     </header>

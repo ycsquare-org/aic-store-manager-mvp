@@ -4,11 +4,19 @@
   const OUTPUT_SIZE = 1000;
   const DETAIL_WIDTH = 900;
   const FONT_STACK = '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif';
+  const tr = (source, variables = {}) => global.AICI18n?.t?.(source, variables) || String(source).replace(/\{\{(\w+)\}\}/g, (match, name) => (
+    Object.hasOwn(variables, name) ? String(variables[name]) : match
+  ));
+  const currentLocale = () => global.AICI18n?.getLocale?.() || "en-US";
   const VIEW_DEFINITIONS = Object.freeze([
-    { id: "front", label: "Front View", fileSuffix: "front" },
-    { id: "angle", label: "45° Feature View", fileSuffix: "45-angle" },
-    { id: "side", label: "Side Structure View", fileSuffix: "side" },
+    { id: "front", labelSource: "Front View", fileSuffix: "front" },
+    { id: "angle", labelSource: "45° Feature View", fileSuffix: "45-angle" },
+    { id: "side", labelSource: "Side Structure View", fileSuffix: "side" },
   ]);
+
+  function viewLabel(definition) {
+    return tr(definition.labelSource);
+  }
 
   // Important: a single uploaded photo cannot reveal unseen product surfaces. True novel
   // front/45°/side viewpoints require a server-side image-generation model. This local,
@@ -819,7 +827,7 @@
       ctx.closePath();
       ctx.fill();
       setFont(ctx, 18, 700);
-      ctx.fillText("PROFILE", 750, 462);
+      ctx.fillText(tr("PROFILE"), 750, 462);
     }
     ctx.restore();
   }
@@ -829,13 +837,13 @@
     setFont(ctx, 16, 700);
     ctx.fillStyle = colors.dark;
     ctx.textBaseline = "middle";
-    ctx.fillText(`VIEW 0${index + 1} / 03`, 76, 72);
+    ctx.fillText(tr("VIEW {{index}} / 03", { index: `0${index + 1}` }), 76, 72);
 
     setFont(ctx, 15, 600);
     ctx.textAlign = "right";
     ctx.fillStyle = colors.dark;
     ctx.globalAlpha = 0.72;
-    ctx.fillText("B2B SCENE COMPOSITION", 946, 72);
+    ctx.fillText(tr("B2B SCENE COMPOSITION"), 946, 72);
     ctx.globalAlpha = 1;
     ctx.textAlign = "left";
 
@@ -849,7 +857,7 @@
     setFont(ctx, 18, 700);
     ctx.fillStyle = colors.accent;
     ctx.textBaseline = "top";
-    ctx.fillText(ellipsize(ctx, `${definition.label} · ${sceneLabel}`, 690), 60, 828);
+    ctx.fillText(ellipsize(ctx, `${viewLabel(definition)} · ${sceneLabel}`, 690), 60, 828);
     setFont(ctx, 35, 700);
     const nameLines = wrapText(ctx, productName, 720, 2);
     drawTextLines(ctx, nameLines, 60, 865, 43, "#12272c");
@@ -857,7 +865,7 @@
     setFont(ctx, 15, 600);
     ctx.fillStyle = "#627276";
     ctx.textAlign = "right";
-    ctx.fillText(ellipsize(ctx, normalizeText(category, "OEM / ODM PRODUCT"), 290), 940, 920);
+    ctx.fillText(ellipsize(ctx, normalizeText(category, tr("OEM / ODM PRODUCT")), 290), 940, 920);
     ctx.textAlign = "left";
   }
 
@@ -873,7 +881,7 @@
     const output = await canvasToPng(canvas);
     return {
       id: definition.id,
-      label: definition.label,
+      label: viewLabel(definition),
       fileName: `${meta.fileBase}-${definition.fileSuffix}.png`,
       dataUrl: output.dataUrl,
       blob: output.blob,
@@ -894,25 +902,25 @@
 
   function formatInteger(value, fallback = "—") {
     const number = Number(value);
-    return Number.isFinite(number) ? new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(number) : fallback;
+    return Number.isFinite(number) ? new Intl.NumberFormat(currentLocale(), { maximumFractionDigits: 0 }).format(number) : fallback;
   }
 
   function formatPrice(value) {
     const number = Number(value);
     return Number.isFinite(number)
-      ? new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(number)
+      ? new Intl.NumberFormat(currentLocale(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(number)
       : "—";
   }
 
   function normalizeDetailData(data = {}) {
-    const category = normalizeText(data.categoryLabel || data.category, "Orthopedic Support");
+    const category = normalizeText(data.categoryLabel || data.category, tr("Orthopedic Support"));
     const defaults = [
-      "Stable support engineered to balance mobility with all-day comfort",
-      "Materials, sizing, and packaging optimized for volume procurement",
-      "Custom branding, colors, sizes, and packaging available",
+      tr("Stable support engineered to balance mobility with all-day comfort"),
+      tr("Materials, sizing, and packaging optimized for volume procurement"),
+      tr("Custom branding, colors, sizes, and packaging available"),
     ];
     return {
-      productName: normalizeText(data.productName || data.name, "OEM Orthopedic Support Product"),
+      productName: normalizeText(data.productName || data.name, tr("OEM Orthopedic Support Product")),
       category,
       minPrice: formatPrice(data.minPrice),
       maxPrice: formatPrice(data.maxPrice),
@@ -920,10 +928,10 @@
       leadTime: formatInteger(data.leadTime),
       sampleDays: formatInteger(data.sampleDays),
       monthlyCapacity: formatInteger(data.monthlyCapacity),
-      targetMarket: normalizeText(data.targetMarket, "Global B2B Market"),
+      targetMarket: normalizeText(data.targetMarketLabel || data.targetMarket, tr("Global B2B Market")),
       sellingPoints: normalizeList(data.sellingPoints || data.sellingPointsRaw, defaults).slice(0, 8),
-      customization: normalizeText(data.customization, "Logo, color, size, and packaging customization"),
-      certifications: normalizeList(data.certifications, ["Quality documents available on request"]).slice(0, 8),
+      customization: normalizeText(data.customization, tr("Logo, color, size, and packaging customization")),
+      certifications: normalizeList(data.certifications, [tr("Quality documents available on request")]).slice(0, 8),
     };
   }
 
@@ -936,7 +944,7 @@
       if (!source) continue;
       try {
         const result = await loadImage(source);
-        loaded.push({ image: result.image, cleanup: result.cleanup, label: normalizeText(view.label, VIEW_DEFINITIONS[index]?.label) });
+        loaded.push({ image: result.image, cleanup: result.cleanup, label: normalizeText(view.label, viewLabel(VIEW_DEFINITIONS[index])) });
       } catch {
         // A missing individual view does not block the long-image export; a placeholder is drawn.
       }
@@ -1007,7 +1015,7 @@
     setFont(ctx, 19, 750);
     ctx.fillStyle = "#ffffff";
     ctx.textBaseline = "middle";
-    ctx.fillText("OEM PRODUCT STUDIO", 84, 47);
+    ctx.fillText(tr("OEM PRODUCT STUDIO"), 84, 47);
     setFont(ctx, 14, 600);
     ctx.textAlign = "right";
     ctx.fillStyle = "rgba(255,255,255,0.68)";
@@ -1038,7 +1046,7 @@
       ctx.fillStyle = "#587177";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText("PRODUCT IMAGE", DETAIL_WIDTH / 2, imageY + imageHeight / 2);
+      ctx.fillText(tr("PRODUCT IMAGE"), DETAIL_WIDTH / 2, imageY + imageHeight / 2);
       ctx.textAlign = "left";
     }
 
@@ -1077,7 +1085,7 @@
     ctx.fillStyle = "#65757a";
     ctx.textBaseline = "bottom";
     ctx.fillText(
-      ellipsize(ctx, `Designed for ${detail.targetMarket} procurement`, cardWidth - 60),
+      ellipsize(ctx, tr("Designed for {{market}} procurement", { market: detail.targetMarket }), cardWidth - 60),
       cardX + 30,
       cardY + cardHeight - 28,
     );
@@ -1090,7 +1098,7 @@
     setFont(ctx, 14, 750);
     ctx.fillStyle = "#738187";
     ctx.textBaseline = "top";
-    ctx.fillText("REFERENCE PRICE", 54, top);
+    ctx.fillText(tr("REFERENCE PRICE"), 54, top);
     setFont(ctx, 36, 760);
     ctx.fillStyle = "#10272f";
     ctx.fillText(`US$${detail.minPrice}–${detail.maxPrice}`, 54, top + 34);
@@ -1107,16 +1115,16 @@
     ctx.fillText("MOQ", 530, top);
     setFont(ctx, 30, 750);
     ctx.fillStyle = "#10272f";
-    ctx.fillText(`${detail.moq} pcs`, 530, top + 35);
+    ctx.fillText(tr("{{count}} pcs", { count: detail.moq }), 530, top + 35);
     setFont(ctx, 15, 600);
     ctx.fillStyle = "#65757a";
-    ctx.fillText(`${detail.leadTime} days lead time`, 530, top + 88);
+    ctx.fillText(tr("{{count}} days lead time", { count: detail.leadTime }), 530, top + 88);
   }
 
   function drawViews(ctx, section, viewImages) {
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, section.y, DETAIL_WIDTH, section.height);
-    drawSectionHeading(ctx, "PRODUCT VIEWS", "Three Buyer-Ready Product Views", 54, section.y + 42);
+    drawSectionHeading(ctx, tr("PRODUCT VIEWS"), tr("Three Buyer-Ready Product Views"), 54, section.y + 42);
     const gap = 18;
     const cardWidth = 252;
     const imageSize = 252;
@@ -1130,20 +1138,20 @@
         ctx.fillStyle = "#789095";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(VIEW_DEFINITIONS[index].label, x + cardWidth / 2, startY + imageSize / 2);
+        ctx.fillText(viewLabel(VIEW_DEFINITIONS[index]), x + cardWidth / 2, startY + imageSize / 2);
         ctx.textAlign = "left";
       }
       setFont(ctx, 16, 720);
       ctx.fillStyle = "#20383e";
       ctx.textBaseline = "top";
-      ctx.fillText(viewImages[index]?.label || VIEW_DEFINITIONS[index].label, x + 2, startY + imageSize + 18);
+      ctx.fillText(viewImages[index]?.label || viewLabel(VIEW_DEFINITIONS[index]), x + 2, startY + imageSize + 18);
     }
   }
 
   function drawSellingPoints(ctx, section) {
     ctx.fillStyle = "#f1f5f5";
     ctx.fillRect(0, section.y, DETAIL_WIDTH, section.height);
-    drawSectionHeading(ctx, "WHY BUYERS CHOOSE IT", "Key Benefits for B2B Buyers", 54, section.y + 48);
+    drawSectionHeading(ctx, tr("WHY BUYERS CHOOSE IT"), tr("Key Benefits for B2B Buyers"), 54, section.y + 48);
     let y = section.y + 150;
     let number = 1;
     for (const row of section.rows) {
@@ -1172,12 +1180,12 @@
     ctx.fillStyle = gradient;
     ctx.fillRect(0, section.y, DETAIL_WIDTH, section.height);
 
-    drawSectionHeading(ctx, "OEM / ODM CAPABILITY", "From Sampling to Volume Delivery", 54, section.y + 52, "#ffffff", "#42d8b9");
+    drawSectionHeading(ctx, tr("OEM / ODM CAPABILITY"), tr("From Sampling to Volume Delivery"), 54, section.y + 52, "#ffffff", "#42d8b9");
     const metricY = section.y + 156;
     const metrics = [
-      { label: "SAMPLE LEAD TIME", value: `${detail.sampleDays} days` },
-      { label: "MONTHLY CAPACITY", value: `${detail.monthlyCapacity} pcs` },
-      { label: "TARGET MARKET", value: detail.targetMarket },
+      { label: tr("SAMPLE LEAD TIME"), value: tr("{{count}} days", { count: detail.sampleDays }) },
+      { label: tr("MONTHLY CAPACITY"), value: tr("{{count}} pcs", { count: detail.monthlyCapacity }) },
+      { label: tr("TARGET MARKET"), value: detail.targetMarket },
     ];
     metrics.forEach((metric, index) => {
       const x = 54 + index * 263;
@@ -1195,12 +1203,12 @@
     setFont(ctx, 15, 720);
     ctx.fillStyle = "#42d8b9";
     ctx.textBaseline = "top";
-    ctx.fillText("CUSTOMIZATION OPTIONS", 54, copyY);
+    ctx.fillText(tr("CUSTOMIZATION OPTIONS"), 54, copyY);
     setFont(ctx, 25, 520);
     drawTextLines(ctx, section.customizationLines, 54, copyY + 40, 34, "rgba(255,255,255,0.90)");
 
     const processY = Math.min(section.y + section.height - 96, copyY + 88 + section.customizationLines.length * 34);
-    const steps = ["Requirements Review", "Sample Development", "Quality Inspection", "Volume Delivery"];
+    const steps = [tr("Requirements Review"), tr("Sample Development"), tr("Quality Inspection"), tr("Volume Delivery")];
     ctx.strokeStyle = "rgba(66,216,185,0.35)";
     ctx.lineWidth = 3;
     ctx.beginPath();
@@ -1225,7 +1233,7 @@
   function drawCertifications(ctx, section) {
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, section.y, DETAIL_WIDTH, section.height);
-    drawSectionHeading(ctx, "QUALITY ASSURANCE", "Certifications & Quality Documentation", 54, section.y + 46);
+    drawSectionHeading(ctx, tr("QUALITY ASSURANCE"), tr("Certifications & Quality Documentation"), 54, section.y + 46);
     let y = section.y + 145;
     for (const row of section.rows) {
       row.cards.forEach((card, column) => {
@@ -1256,16 +1264,16 @@
     setFont(ctx, 24, 750);
     ctx.fillStyle = "#10272f";
     ctx.textBaseline = "top";
-    ctx.fillText("READY FOR YOUR OEM PROJECT", 54, section.y + 44);
+    ctx.fillText(tr("READY FOR YOUR OEM PROJECT"), 54, section.y + 44);
     setFont(ctx, 15, 550);
     ctx.fillStyle = "#65757a";
-    ctx.fillText("Final prices, lead times, and certificates are subject to order confirmation.", 54, section.y + 88);
+    ctx.fillText(tr("Final prices, lead times, and certificates are subject to order confirmation."), 54, section.y + 88);
     fillRoundedRect(ctx, 704, section.y + 46, 142, 54, 27, "#0b8577");
     setFont(ctx, 15, 750);
     ctx.fillStyle = "#ffffff";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("OEM READY", 775, section.y + 73);
+    ctx.fillText(tr("OEM READY"), 775, section.y + 73);
     ctx.textAlign = "left";
   }
 
@@ -1274,18 +1282,18 @@
     const loaded = await loadImage(sourceUrl);
     try {
       const prepared = prepareProductImage(loaded.image);
-      const normalizedProductName = normalizeText(productName, "OEM Orthopedic Support Product");
-      const normalizedCategory = normalizeText(category, "Orthopedic Support");
+      const normalizedProductName = normalizeText(productName, tr("OEM Orthopedic Support Product"));
+      const normalizedCategory = normalizeText(category, tr("Orthopedic Support"));
       const normalizedScene = normalizeText(scene);
       const sceneKind = inferSceneKind(normalizedScene, normalizedCategory);
       const sceneNames = {
-        sports: "Sports Rehabilitation Setting",
-        clinic: "Professional Rehabilitation Setting",
-        office: "Workplace Support Setting",
-        outdoor: "Outdoor Sports Setting",
-        factory: "Manufacturing Capability Setting",
-        home: "Everyday Use Setting",
-        studio: "Clean Studio Setting",
+        sports: tr("Sports Rehabilitation Setting"),
+        clinic: tr("Professional Rehabilitation Setting"),
+        office: tr("Workplace Support Setting"),
+        outdoor: tr("Outdoor Sports Setting"),
+        factory: tr("Manufacturing Capability Setting"),
+        home: tr("Everyday Use Setting"),
+        studio: tr("Clean Studio Setting"),
       };
       const meta = {
         productName: normalizedProductName,

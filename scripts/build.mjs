@@ -19,7 +19,7 @@ if (!outputRoot.startsWith(`${projectRoot}${sep}`) || relative(projectRoot, outp
 rmSync(outputRoot, { force: true, recursive: true });
 mkdirSync(outputRoot, { recursive: true });
 
-for (const file of ["app.js", "image-studio.js", "styles.css"]) {
+for (const file of ["i18n.js", "app.js", "image-studio.js", "styles.css"]) {
   copyFileSync(join(projectRoot, file), join(outputRoot, file));
 }
 
@@ -58,7 +58,7 @@ writeFileSync(join(outputRoot, "index.html"), html, "utf8");
 
 const manifest = {
   builtAt: new Date().toISOString(),
-  files: ["index.html", "styles.css", "image-studio.js", "app.js", ...(existsSync(join(outputRoot, "og-en.png")) ? ["og-en.png"] : [])],
+  files: ["index.html", "styles.css", "i18n.js", "image-studio.js", "app.js", ...(existsSync(join(outputRoot, "og-en.png")) ? ["og-en.png"] : [])],
   project: "AIC-2006-0010",
 };
 const manifestPath = join(outputRoot, "build-manifest.json");

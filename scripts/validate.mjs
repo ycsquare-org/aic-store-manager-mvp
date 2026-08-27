@@ -5,6 +5,7 @@ const root = resolve(process.cwd());
 const requiredFiles = [
   "index.html",
   "styles.css",
+  "i18n.js",
   "image-studio.js",
   "app.js",
   "package.json",
@@ -23,6 +24,7 @@ for (const file of requiredFiles) {
 const html = readFileSync(join(root, "index.html"), "utf8");
 const css = readFileSync(join(root, "styles.css"), "utf8");
 const script = readFileSync(join(root, "app.js"), "utf8");
+const i18n = readFileSync(join(root, "i18n.js"), "utf8");
 const imageStudio = readFileSync(join(root, "image-studio.js"), "utf8");
 let packageConfig = {};
 let vercelConfig = {};
@@ -54,6 +56,9 @@ const checks = [
   [script.includes("validateForm"), "Input validation is missing"],
   [script.includes("generateDetail"), "The generation state is missing"],
   [script.includes("generateSceneViews"), "The three-view generation flow is missing"],
+  [html.includes('id="language-selector"'), "The language selector is missing"],
+  [i18n.includes('"zh-CN"') && i18n.includes("es:") && i18n.includes("de:"), "The four-language dictionary is incomplete"],
+  [script.includes("aic:languagechange"), "Dynamic content is not refreshed after a language change"],
   [imageStudio.includes("generateDetailLongImage"), "Long detail-image generation is missing"],
   [script.includes("copyGeneratedContent"), "Copy feedback is missing"],
   [script.includes("downloadGeneratedPackage"), "Export feedback is missing"],
@@ -64,7 +69,7 @@ const checks = [
   [vercelConfig.buildCommand === "npm run build", "The Vercel build command is incorrect"],
   [!/(lorem ipsum|placeholder text)/i.test(html), "The page contains meaningless placeholder copy"],
   [!/<[^>]+tabindex="[1-9]/.test(html), "A positive tabindex may break keyboard navigation order"],
-  [!/\p{Script=Han}/u.test(html), "The English page still contains Chinese text"],
+  [!/\p{Script=Han}/u.test(html.replace(/<option value="zh-CN">[\s\S]*?<\/option>/, "")), "Unexpected Chinese copy exists outside the language selector"],
 ];
 
 checks.forEach(([passes, message]) => {
@@ -90,6 +95,16 @@ const unlabeled = formControls
   .filter(({ id }) => !labelTargets.has(id) && !labeledByWrapping.has(id))
   .map(({ id }) => id);
 if (unlabeled.length) failures.push(`Controls missing visible labels: ${unlabeled.join(", ")}`);
+
+const translationSources = new Set(
+  [...i18n.matchAll(/^\s*\["((?:\\.|[^"\\])*)",/gm)].map((match) => JSON.parse(`"${match[1]}"`)),
+);
+const literalTranslationCalls = [...`${script}\n${imageStudio}`.matchAll(/\b(?:t|tr)\("((?:\\.|[^"\\])*)"/g)]
+  .map((match) => JSON.parse(`"${match[1]}"`));
+const missingTranslations = [...new Set(literalTranslationCalls.filter((source) => !translationSources.has(source)))];
+if (missingTranslations.length) {
+  failures.push(`Translation dictionary is missing ${missingTranslations.length} source string(s): ${missingTranslations.join(" | ")}`);
+}
 
 const ogPath = join(root, "public", "og-en.png");
 if (existsSync(ogPath) && statSync(ogPath).size < 20_000) {
