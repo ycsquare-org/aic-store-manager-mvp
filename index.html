@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Alibaba.com Store Manager for product images, selling points, OEM capabilities, pricing, and publishing schedules."
+    />
+    <meta name="theme-color" content="#f5f5f7" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:title" content="Alibaba.com Store Manager" />
+    <meta
+      property="og:description"
+      content="Turn product information into buyer-ready listings, published on schedule."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Alibaba.com Store Manager" />
+    <meta
+      name="twitter:description"
+      content="Turn product information into buyer-ready listings, published on schedule."
+    />
+    <!-- social-preview-image -->
+    <title>Alibaba.com Store Manager | AIC-2006-0010</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./image-studio.js" defer></script>
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="#top" aria-label="Alibaba.com Store Manager home">
+          <span class="brand-mark" aria-hidden="true">AI</span>
+          <span>
+            <strong>Alibaba.com Store Manager</strong>
+            <small>AIC-2006-0010</small>
+          </span>
+        </a>
+        <div class="header-status" aria-label="System status">
+          <span class="status-dot" aria-hidden="true"></span>
+          Local MVP · No live publishing
+        </div>
+      </div>
+    </header>
+
+    <main id="main-content" tabindex="-1">
+      <section class="hero shell" id="top" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow">PRODUCT PUBLISHING COPILOT</p>
+          <h1 id="hero-title">Turn product information into buyer-ready listings, published on schedule.</h1>
+          <p class="hero-lede">
+            Organize product images, buyer benefits, OEM capabilities, and pricing in one place. Create B2B-ready detail pages and add them to a daily publishing schedule.
+          </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#workspace">Create Publishing Task</a>
+            <a class="button button-secondary" href="#task-list">View Today’s Schedule</a>
+          </div>
+          <p class="assumption-note">
+            <strong>Assumption:</strong> This MVP simulates the full prepare–generate–schedule–export workflow. Live automated uploads will require an authorized Alibaba.com API integration.
+          </p>
+        </div>
+
+        <aside class="automation-card" aria-labelledby="automation-title">
+          <div class="card-topline">
+            <span class="mini-label">AUTO PUBLISH</span>
+            <span class="state-badge state-ready">Schedule ready</span>
+          </div>
+          <h2 id="automation-title">Today’s Publishing Plan</h2>
+          <div class="next-run">
+            <span>Next run</span>
+            <strong>09:30</strong>
+            <small>Today · 3 products</small>
+          </div>
+          <ol class="run-steps">
+            <li class="is-done"><span aria-hidden="true">✓</span>Validate images and product data</li>
+            <li class="is-current"><span aria-hidden="true">2</span>Generate selling points and detail page</li>
+            <li><span aria-hidden="true">3</span>Add to publishing queue</li>
+          </ol>
+        </aside>
+      </section>
+
+      <section class="metrics shell" aria-label="Today’s task summary">
+        <article><span>Incomplete</span><strong id="metric-drafts">2</strong><small>Required details missing</small></article>
+        <article><span>Scheduled Today</span><strong id="metric-scheduled">3</strong><small>Queued by rule</small></article>
+        <article><span>Published</span><strong id="metric-published">8</strong><small>Total today</small></article>
+        <article><span>Needs Attention</span><strong id="metric-failed">1</strong><small>Edit and retry</small></article>
+      </section>
+
+      <section class="workspace shell" id="workspace" aria-labelledby="workspace-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">NEW PUBLISHING TASK</p>
+            <h2 id="workspace-title">Create a Publishing Task</h2>
+            <p>Complete the product details, generate the page, and confirm the publishing schedule.</p>
+          </div>
+          <ol class="stepper" aria-label="Task creation steps">
+            <li class="active"><span>1</span>Product Details</li>
+            <li><span>2</span>Page Content</li>
+            <li><span>3</span>Publishing Rules</li>
+          </ol>
+        </div>
+
+        <div class="workspace-grid">
+          <form class="editor-card" id="product-form" novalidate>
+            <section class="form-section" aria-labelledby="images-heading">
+              <div class="form-section-heading">
+                <div>
+                  <span class="section-number">01</span>
+                  <h3 id="images-heading">Product Images &amp; Scenes</h3>
+                </div>
+                <span class="optional-label">1 source image → 3 scene images</span>
+              </div>
+              <label class="upload-zone" for="product-images" id="upload-zone">
+                <span class="upload-icon" aria-hidden="true">＋</span>
+                <strong>Upload one clear source image</strong>
+                <small>Transparent or solid background recommended · JPG, PNG, or WebP · Up to 10 MB</small>
+                <input
+                  id="product-images"
+                  name="productImages"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  aria-describedby="product-images-error"
+                />
+              </label>
+              <div class="image-list" id="image-list" aria-live="polite">
+                <div class="empty-image-slot" id="image-empty-state">
+                  <span aria-hidden="true">1</span>
+                  The source image preserves product appearance and structure
+                </div>
+              </div>
+              <p class="field-error" id="product-images-error"></p>
+
+              <div class="scene-studio" aria-labelledby="scene-studio-title">
+                <div class="scene-studio-copy">
+                  <span class="mini-label">SCENE &amp; ANGLES</span>
+                  <strong id="scene-studio-title">Match the product scene and generate three views</strong>
+                  <small>Create a front hero view, 45° feature view, and side structure view for the detail image.</small>
+                </div>
+                <div class="field scene-field">
+                  <label for="scene-preset">Scene Background</label>
+                  <select id="scene-preset" name="scenePreset" aria-describedby="scene-preset-hint">
+                    <option value="auto">Auto-match Product Category</option>
+                    <option value="rehabilitation">Rehabilitation Clinic</option>
+                    <option value="training">Sports Training Studio</option>
+                    <option value="outdoor">Outdoor Sports</option>
+                    <option value="studio">Clean Studio</option>
+                  </select>
+                  <small id="scene-preset-hint">Automatically selects a buyer-relevant setting for knee, back, and other support products.</small>
+                </div>
+                <ol class="angle-plan" aria-label="Three views to generate">
+                  <li><span>01</span><strong>Front Hero View</strong><small>Show the complete product</small></li>
+                  <li><span>02</span><strong>45° Feature View</strong><small>Highlight materials and construction</small></li>
+                  <li><span>03</span><strong>Side Structure View</strong><small>Show support components</small></li>
+                </ol>
+                <p class="local-render-note">
+                  <strong>Current MVP:</strong> Scene compositions are previewed locally. A server-side image model can later generate realistic new angles while preserving product consistency.
+                </p>
+              </div>
+            </section>
+
+            <section class="form-section" aria-labelledby="basic-heading">
+              <div class="form-section-heading">
+                <div>
+                  <span class="section-number">02</span>
+                  <h3 id="basic-heading">Basic Product Information</h3>
+                </div>
+                <span class="required-note">* Required</span>
+              </div>
+
+              <div class="form-grid two-columns">
+                <div class="field field-wide">
+                  <label for="product-name">Product Name (English) <span aria-hidden="true">*</span></label>
+                  <input
+                    id="product-name"
+                    name="productName"
+                    type="text"
+                    autocomplete="off"
+                    placeholder="Adjustable Hinged Knee Brace for Sports Recovery"
+                    aria-describedby="product-name-hint product-name-error"
+                    required
+                  />
+                  <small id="product-name-hint">Describe the product and its use with keywords buyers search for.</small>
+                  <p class="field-error" id="product-name-error"></p>
+                </div>
+
+                <div class="field">
+                  <label for="category">Product Category <span aria-hidden="true">*</span></label>
+                  <select id="category" name="category" aria-describedby="category-error" required>
+                    <option value="">Select a category</option>
+                    <option value="Knee Support">Knee Support</option>
+                    <option value="Back Support">Back Support</option>
+                    <option value="Ankle Support">Ankle Support</option>
+                    <option value="Wrist Support">Wrist Support</option>
+                    <option value="Custom Orthopedic Brace">Custom Orthopedic Brace</option>
+                  </select>
+                  <p class="field-error" id="category-error"></p>
+                </div>
+
+                <div class="field">
+                  <label for="target-market">Primary Buyer Market</label>
+                  <select id="target-market" name="targetMarket">
+                    <option value="North America & Europe">North America &amp; Europe</option>
+                    <option value="Southeast Asia">Southeast Asia</option>
+                    <option value="Middle East">Middle East</option>
+                    <option value="Global">Global</option>
+                  </select>
+                </div>
+
+                <div class="field field-wide">
+                  <label for="keywords">Search Keywords <span aria-hidden="true">*</span></label>
+                  <input
+                    id="keywords"
+                    name="keywords"
+                    type="text"
+                    placeholder="hinged knee brace, sports knee support, OEM brace"
+                    aria-describedby="keywords-hint keywords-error"
+                    required
+                  />
+                  <small id="keywords-hint">Separate keywords with commas. Up to five keywords.</small>
+                  <p class="field-error" id="keywords-error"></p>
+                </div>
+              </div>
+            </section>
+
+            <section class="form-section" aria-labelledby="value-heading">
+              <div class="form-section-heading">
+                <div>
+                  <span class="section-number">03</span>
+                  <h3 id="value-heading">Buyer Benefits &amp; OEM Capabilities</h3>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="selling-points">Key Selling Points <span aria-hidden="true">*</span></label>
+                <textarea
+                  id="selling-points"
+                  name="sellingPoints"
+                  rows="4"
+                  placeholder="Example: Dual hinges provide stable support; breathable fabric stays comfortable for extended wear; custom branding, colors, and packaging available."
+                  aria-describedby="selling-points-hint selling-points-error"
+                  required
+                ></textarea>
+                <small id="selling-points-hint">Cover materials, function, use cases, and buyer value. Separate points with semicolons.</small>
+                <p class="field-error" id="selling-points-error"></p>
+              </div>
+
+              <div class="form-grid two-columns compact-top">
+                <div class="field">
+                  <label for="customization">Customization Options</label>
+                  <input id="customization" name="customization" type="text" value="Logo, color, size, packaging" />
+                </div>
+                <div class="field">
+                  <label for="sample-days">Sample Lead Time (Days)</label>
+                  <input id="sample-days" name="sampleDays" type="number" min="1" max="60" value="7" aria-describedby="oem-number-error" />
+                </div>
+                <div class="field">
+                  <label for="monthly-capacity">Monthly Capacity (Units)</label>
+                  <input id="monthly-capacity" name="monthlyCapacity" type="number" min="1" max="9999999" value="50000" aria-describedby="oem-number-error" />
+                </div>
+                <div class="field">
+                  <label for="certifications">Certifications</label>
+                  <input id="certifications" name="certifications" type="text" value="ISO 13485, CE, FDA" />
+                </div>
+              </div>
+              <p class="field-error field-error-block" id="oem-number-error"></p>
+            </section>
+
+            <section class="form-section" aria-labelledby="trade-heading">
+              <div class="form-section-heading">
+                <div>
+                  <span class="section-number">04</span>
+                  <h3 id="trade-heading">Pricing &amp; Publishing Rules</h3>
+                </div>
+              </div>
+
+              <div class="form-grid four-columns">
+                <div class="field">
+                  <label for="moq">MOQ (Units)</label>
+                  <input id="moq" name="moq" type="number" min="1" max="999999" value="100" aria-describedby="trade-number-error" />
+                </div>
+                <div class="field">
+                  <label for="min-price">Minimum Price (USD) <span aria-hidden="true">*</span></label>
+                  <input id="min-price" name="minPrice" type="number" min="0.01" max="999999.99" step="0.01" value="8.90" aria-describedby="price-error" required />
+                </div>
+                <div class="field">
+                  <label for="max-price">Maximum Price (USD) <span aria-hidden="true">*</span></label>
+                  <input id="max-price" name="maxPrice" type="number" min="0.01" max="999999.99" step="0.01" value="12.60" aria-describedby="price-error" required />
+                </div>
+                <div class="field">
+                  <label for="lead-time">Lead Time (Days)</label>
+                  <input id="lead-time" name="leadTime" type="number" min="1" max="365" value="20" aria-describedby="trade-number-error" />
+                </div>
+              </div>
+              <p class="field-error field-error-block" id="trade-number-error"></p>
+              <p class="field-error field-error-block" id="price-error"></p>
+
+              <div class="price-adjuster" aria-labelledby="price-adjust-title">
+                <div>
+                  <strong id="price-adjust-title">Quick Price Adjustment</strong>
+                  <small id="price-adjust-preview">Enter a percentage to preview the adjusted price.</small>
+                </div>
+                <div class="price-adjust-controls">
+                  <label for="price-adjust-percent">Adjustment</label>
+                  <div class="input-suffix">
+                    <input
+                      id="price-adjust-percent"
+                      name="priceAdjustPercent"
+                      type="number"
+                      min="-50"
+                      max="100"
+                      step="0.1"
+                      value="3"
+                      aria-describedby="price-adjust-feedback"
+                    />
+                    <span aria-hidden="true">%</span>
+                  </div>
+                  <button class="button button-small" id="apply-price-adjustment" type="button">Apply Price</button>
+                </div>
+                <p class="inline-feedback" id="price-adjust-feedback" aria-live="polite"></p>
+              </div>
+
+              <div class="rule-panel">
+                <label class="switch-row" for="auto-publish">
+                  <span>
+                    <strong>Enable Daily Auto-Publishing</strong>
+                    <small id="rule-summary">Publish 3 products daily at 09:30, starting tomorrow</small>
+                  </span>
+                  <input id="auto-publish" name="autoPublish" type="checkbox" role="switch" checked />
+                </label>
+                <div class="form-grid three-columns rule-fields">
+                  <div class="field">
+                    <label for="daily-limit">Daily Quantity</label>
+                    <input id="daily-limit" name="dailyLimit" type="number" min="1" max="20" value="3" aria-describedby="schedule-error" />
+                  </div>
+                  <div class="field">
+                    <label for="publish-time">Run Time</label>
+                    <input id="publish-time" name="publishTime" type="time" value="09:30" aria-describedby="schedule-error" />
+                  </div>
+                  <div class="field">
+                    <label for="start-date">Start Date</label>
+                    <input id="start-date" name="startDate" type="date" aria-describedby="schedule-error" />
+                  </div>
+                </div>
+                <p class="field-error field-error-block" id="schedule-error"></p>
+              </div>
+            </section>
+
+            <details class="demo-controls">
+              <summary>Demo &amp; Testing Settings</summary>
+              <label for="simulate-failure">
+                <input id="simulate-failure" name="simulateFailure" type="checkbox" />
+                Simulate a generation failure to test error and retry feedback
+              </label>
+            </details>
+
+            <div class="form-actions">
+              <button class="button button-secondary" type="button" id="save-draft">Save Draft</button>
+              <button class="button button-primary button-generate" type="submit" id="generate-button">
+                <span aria-hidden="true">✦</span>
+                Generate 3 Scene Images &amp; Detail Image
+              </button>
+            </div>
+          </form>
+
+          <aside class="preview-card" aria-labelledby="preview-heading">
+            <div class="preview-toolbar">
+              <div>
+                <span class="live-dot" aria-hidden="true"></span>
+                <strong id="preview-heading">Detail Image Preview</strong>
+              </div>
+              <span id="preview-scene-label">Auto-Matched Scene</span>
+            </div>
+            <div class="preview-state" id="preview-state" hidden>
+              <span class="preview-state-icon" aria-hidden="true">✦</span>
+              <span id="preview-state-text"></span>
+            </div>
+            <div class="preview-surface" id="preview-surface" aria-busy="false">
+              <div class="detail-image-empty" id="detail-image-empty">
+                <span class="preview-image-mark" aria-hidden="true">✦</span>
+                <strong>Preparing a sample detail image</strong>
+                <small>Your generated page will appear as one downloadable long-form PNG</small>
+              </div>
+              <img
+                class="detail-page-image"
+                id="detail-page-image"
+                alt="Sample knee brace detail image showing three views, pricing, selling points, and OEM capabilities"
+                hidden
+              />
+            </div>
+            <section class="angle-results" aria-labelledby="angle-results-title">
+              <div class="angle-results-heading">
+                <div>
+                  <span class="mini-label">3 GENERATED VIEWS</span>
+                  <h3 id="angle-results-title">Three Scene Views</h3>
+                </div>
+                <span class="sample-badge" id="angle-result-badge">Sample</span>
+              </div>
+              <div class="angle-gallery" id="angle-gallery"></div>
+            </section>
+            <p class="sr-only" id="detail-accessible-copy">
+              The detail image includes the product name, pricing, MOQ, three product views, buyer benefits, lead time, and OEM customization capabilities.
+            </p>
+            <div class="preview-actions">
+              <button class="button button-secondary" type="button" id="copy-content" disabled>Copy Detail Copy</button>
+              <button class="button button-dark" type="button" id="export-package" disabled>Download Detail PNG</button>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="tasks shell" id="task-list" aria-labelledby="task-list-heading">
+        <div class="section-heading task-heading">
+          <div>
+            <p class="eyebrow">PUBLISHING QUEUE</p>
+            <h2 id="task-list-heading">Today’s Publishing Schedule</h2>
+            <p>Review each product’s data completeness, pricing, and publishing status.</p>
+          </div>
+          <div class="task-filters" role="group" aria-label="Filter publishing tasks">
+            <button type="button" class="filter-button active" data-filter="all" aria-pressed="true">All</button>
+            <button type="button" class="filter-button" data-filter="scheduled" aria-pressed="false">Scheduled</button>
+            <button type="button" class="filter-button" data-filter="published" aria-pressed="false">Published</button>
+            <button type="button" class="filter-button" data-filter="failed" aria-pressed="false">Needs Attention</button>
+            <button type="button" class="filter-button" data-filter="draft" aria-pressed="false">Drafts</button>
+          </div>
+        </div>
+
+        <div class="task-table-wrap">
+          <table class="task-table">
+            <thead>
+              <tr>
+                <th scope="col">Product</th>
+                <th scope="col">Scheduled Time</th>
+                <th scope="col">Price</th>
+                <th scope="col">Data Completeness</th>
+                <th scope="col">Status</th>
+                <th scope="col"><span class="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody id="task-table-body">
+              <tr data-status="scheduled">
+                <td data-label="Product"><strong>Adjustable Hinged Knee Brace</strong><small>Knee Support · OEM / ODM</small></td>
+                <td data-label="Scheduled Time">Today, 09:30</td>
+                <td data-label="Price">US$8.90–12.60</td>
+                <td data-label="Data Completeness"><div class="progress" role="progressbar" aria-label="Data completeness" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><span style="width: 100%"></span></div><small>100%</small></td>
+                <td data-label="Status"><span class="state-badge state-scheduled">Scheduled</span></td>
+                <td><button type="button" class="text-button" data-task-action="view">View</button></td>
+              </tr>
+              <tr data-status="published">
+                <td data-label="Product"><strong>Breathable Lumbar Support Belt</strong><small>Back Support · Medical Rehabilitation</small></td>
+                <td data-label="Scheduled Time">Today, 08:45</td>
+                <td data-label="Price">US$6.20–9.80</td>
+                <td data-label="Data Completeness"><div class="progress" role="progressbar" aria-label="Data completeness" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><span style="width: 100%"></span></div><small>100%</small></td>
+                <td data-label="Status"><span class="state-badge state-published">Published</span></td>
+                <td><button type="button" class="text-button" data-task-action="view">View</button></td>
+              </tr>
+              <tr data-status="failed">
+                <td data-label="Product"><strong>Elastic Wrist Support Strap</strong><small>Wrist Support · Sports Protection</small></td>
+                <td data-label="Scheduled Time">Today, 08:30</td>
+                <td data-label="Price">US$1.80–2.40</td>
+                <td data-label="Data Completeness"><div class="progress warning" role="progressbar" aria-label="Data completeness" aria-valuemin="0" aria-valuemax="100" aria-valuenow="86"><span style="width: 86%"></span></div><small>86%</small></td>
+                <td data-label="Status"><span class="state-badge state-failed">Price Check Required</span></td>
+                <td><button type="button" class="text-button" data-task-action="retry">Fix</button></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="empty-state" id="task-empty-state" hidden>
+            <span aria-hidden="true">○</span>
+            <strong>No tasks match this filter</strong>
+            <p>Choose another status or create a new publishing task.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer shell">
+      <p>Alibaba.com Store Manager · Product Admin Workspace</p>
+      <p>Data is stored only in this browser. This MVP does not modify your live store.</p>
+    </footer>
+
+    <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+    <div class="sr-only" id="global-status" role="status" aria-live="polite"></div>
+  </body>
+</html>
